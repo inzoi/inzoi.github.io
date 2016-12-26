@@ -1,8 +1,33 @@
-﻿<html>
+<html>
 <head>
 <meta content="text/html; charset=utf-8" http-equiv="content-type"/>
-<title>汉字与中古四拼相互转换</title>
+<title>中古四拼与汉字相互转换</title>
 <script>
+var ending = {
+"。":".",
+"？":".",
+"！":".",
+".":".",
+"?":".",
+"!":"."
+}
+var punct = {
+"，":", ",
+"。":". ",
+"？":"? ",
+"！":"! ",
+"；":"; ",
+"：":": ",
+"“":"\"",
+"‘":"'",
+"”":"\"",
+"’":"'",
+"、":", ",
+"…":"...",
+"（":"(",
+"）":")",
+"　":" "
+}
 var mapping = {
 "吖":"a",
 "阿":"o",
@@ -16361,7 +16386,8 @@ var mapping = {
 "葃":"jok|jlak|jiek",
 "酢":"cuw|jok",
 "飵":"jok|juw",
-"糳":"zok"};
+"糳":"zok"
+};
 var mapping2 = {
 "o":"啊阿婀疴屙锕钶錒妸妿娿痾鈳",
 "a":"鸦丫桠吖铔椏鴉鵶錏",
@@ -19968,10 +19994,20 @@ var mapping2 = {
 function clk() {
 	var textIn = document.getElementById("text_in").value;
 	var textOut = "";
+	var capstate = "true";
 	for (var i = 0; i < textIn.length; i++) {
 		var ch = textIn.charAt(i);
 		var mapped = mapping[ch];
 		if (!mapped) {
+			var mapending = ending[ch];
+			if (mapending) {
+				capstate = "true";
+			};
+			var mappunct = punct[ch];
+			if (mappunct) {
+				textOut += mappunct;
+				continue;
+			}
 			textOut += ch;
 			continue;
 		}
@@ -19986,6 +20022,11 @@ function clk() {
 				};
 				mapped = firstmap;				
 			};
+			if ((capit.checked) && (capstate== "true"))
+			{
+				mapped = mapped.charAt(0).toUpperCase() + mapped.substring(1);
+				capstate = "false";
+			}			
 			textOut += ch+mapped+" ";
 		};
 	}
@@ -19997,8 +20038,8 @@ function clk2() {
 	var ph="";
 	for (var i = 0; i < textIn.length; i++) {
 		var ch = textIn.charAt(i);
-		if (ch>="a" && ch <="z") {
-			ph+=ch;
+		if ( (ch>="a" && ch <="z") || (ch>="A" && ch <="Z")) {
+			ph+=ch.toLowerCase();
 			continue;
 		}
 		var mapped = mapping2[ph];
@@ -20026,15 +20067,19 @@ function clk2() {
 </script>
 </head>
 <body>
-<input type="button" onclick="clk();" value="汉字转中古四拼"></input>
-<input type="button" onclick="clk2();" value="中古四拼转汉字"></input>
 <label for="comparison"><input type="checkbox" id="comparison" checked="true" />字音对照</label>
-<label for="comparison"><input type="checkbox" id="first" checked="false" />只输出第一个音</label>
-<label for="comparison"><input type="checkbox" id="first5" checked="false" />只输出前五个字</label>
+<input type="button" onclick="clk();" value="汉字转中古四拼"></input>
+<label for="comparison"><input type="checkbox" id="first" checked="true" />仅出首音</label>
+<label for="comparison"><input type="checkbox" id="capit" />句首大写</label>
+<input type="button" onclick="clk2();" value="中古四拼转汉字"></input>
+<label for="comparison"><input type="checkbox" id="first5" checked="true" />仅出前五字</label>
 <br/>
 <textarea id="text_in" cols="75" rows="15"></textarea>
 <br/>
 <textarea id="text_out" cols="75" rows="15">[结果输出框]</textarea>
+<br/>
+<a href="tk.html">中古音与汉字互转</a>
+<a href="td.html">中古音与中古四拼互转</a>
 <br/>
 <a href="http://www.newsmth.net/nForum/#!article/Linguistics/79023">中古四拼介绍</a>
 <a href="https://jq.qq.com/?_wv=1027&k=42uSxTv">中古四拼QQ群群号: 304444534</a>
