@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定性化学分析的性能与不确定度评估</title>
+    <style>
+        body {
+            font-family: "宋体", SimSun, "Microsoft YaHei", sans-serif;
+            margin: 15px;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 920px;
+            margin: 0 auto;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        fieldset {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        legend {
+            font-weight: bold;
+        }
+        .mode-group, .settings-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        label {
+            margin-right: 5px;
+        }
+        textarea {
+            font-family: "宋体", SimSun, monospace;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .input-area {
+            margin-bottom: 10px;
+        }
+        .output-area {
+            background-color: #f5f5f5;
+            border: 1px solid #999;
+        }
+        .buttons {
+            margin: 10px 0;
+        }
+        button {
+            padding: 6px 16px;
+            margin-right: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>定性化学分析的性能与不确定度评估</h2>
+    <p>基于 EURACHEM/CITAC 指南 (2021)</p>
+
+    <!-- 模式选择 -->
+    <fieldset>
+        <legend>模式 Mode</legend>
+        <div class="mode-group">
+            <label><input type="radio" name="mode" value="Contingency" checked onchange="switchMode()"> 列联表 Contingency table</label>
+            <label><input type="radio" name="mode" value="Max" onchange="switchMode()"> 最大限量 Max. Limit</label>
+            <label><input type="radio" name="mode" value="Min" onchange="switchMode()"> 最小限量 Min. Limit</label>
+            <label><input type="radio" name="mode" value="Interval" onchange="switchMode()"> 区间限量 Interval Limit</label>
+        </div>
+    </fieldset>
+
+    <!-- 设置 -->
+    <fieldset>
+        <legend>设置 Setup</legend>
+        <div class="settings-group">
+            <span>输出格式：</span>
+            <label><input type="radio" name="numberFormat" value="normal" checked> 普通计数法 Normal</label>
+            <label><input type="radio" name="numberFormat" value="scientific"> 科学计数法 Scientific</label>
+            <span style="margin-left: 20px;">小数位数 Digit (0-10)：</span>
+            <input type="number" id="digitInput" value="5" min="0" max="10" style="width:70px;">
+        </div>
+    </fieldset>
+
+    <!-- 输入数据 -->
+    <div class="input-area">
+        <label><strong>输入数据：</strong></label><br>
+        <textarea id="inputText" rows="5" placeholder="请按示例格式输入参数..."></textarea>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="buttons">
+        <button onclick="calculate()">计算 Calculation</button>
+        <button onclick="showIntroduction()">介绍 Introduction</button>
+    </div>
+
+    <!-- 输出结果 -->
+    <div class="output-area">
+        <label><strong>计算结果：</strong></label><br>
+        <textarea id="outputText" rows="20" readonly style="background:#f5f5f5;"></textarea>
+    </div>
+</div>
+
+<!-- 隐藏的帮助内容，用于弹出窗口 -->
+<div id="helpContent" style="display:none;">
+《定性化学分析的性能和不确定度评估》软件使用说明书
+制作人：黄挺
+日期：2024.7
+
+1. 软件简介
+1.1 软件的简介和描述：
+  本软件是根据“EURACHEM指南”，针对定性化学分析进行性能与不确定度评估的软件：
+  《EURACHEM/CITAC指南：定性化学分析的性能和不确定度评估》(2021)
+   EURACHEM/CITAC Guide 
+   Assessment of performance and uncertainty in qualitative chemical analysis (2021)
+
+1.2 软件工作流程：
+  首先在“模式”菜单选择一种模式，然后在输入文本框中输入数据；
+  可以在“设置”菜单中选择普通或科学计数法、以及小数位数；
+  最后选择“计算”菜单，软件就会在输出文本框计算结果。
+
+1.3 技术特点：
+  针对EURACHEM指南中参数多，计算复杂等情况，可以迅速计算出所有评价与不确定度等结果。
+  对输入的数据都进行了验证。如果输出结果是不可计算的会自动输出“Not available”。
+  可以选择普通计数法或科学计数法、以及不同的小数位数，方便进一步计算。
+
+2. 软件功能
+2.1 模式1：列联表
+  输入参数的符号、名称以及要求：
+    tp：真阳性案例数，必须是非负整数。
+    fp：假阳性案例数，必须是非负整数。
+    fn：假阴性案例数，必须是非负整数。
+    tn：真阴性案例数，必须是非负整数。
+    P(+)：阳性案例的先验概率，必须是非负实数。
+    P(-)：阴性案例的先验概率，必须是非负实数，P(+)+P(-)必须等于1。
+  输出参数的符号、名称以及要求：
+    p：阳性结果数，p=tp+fp。
+    n：阴性结果数，n=fn+tn。
+    pc：阳性案例数，pc=tp+fn。
+    nc：阴性案例数，nc=fp+tn。
+    TP：真阳性率，即SS（灵敏度），TP=tp/pc。
+    FP：假阳性率，FP=fp/nc。
+    TN：真阴性率，即SP（特异度），TN=SP=tn/nc。
+    FN：假阴性率，FN=fn/pc。
+    PPV：“阳性预测值”或“精密度”，PPV=tp/p。
+    NPV：“阴性预测值”，NPV=tn/n。
+    E：效率，E=(tp+tn)/(p+n)。
+    Y：尤登指数，Y=SS(%)+SP(%)-100。
+    LR(+)：阳性结果的似然率，LR(+)=TP/FP。
+    LR(-)：阴性结果的似然率，LR(-)=TN/FN。
+    威尔逊区间A1：A1=2tp+1.96^2。
+    威尔逊区间A2：A2=1.96*(1.96^2+4tp*fn/(tp+fn))^0.5。
+    威尔逊区间A3：A3=2(tp+fn+1.96^2)。
+    LL(SS,95)：SS在95%置信区间的低限，LL(SS,95)=(A1-A2)/A3*100%。
+    HL(SS,95)：SS在95%置信区间的高限，HL(SS,95)=(A1+A2)/A3*100%。
+    威尔逊区间B1：B1=2tn+1.96^2。
+    威尔逊区间B2：B2=1.96*(1.96^2+4fp*tn/(fp+tn))^0.5。
+    威尔逊区间B3：B3=2(fp+tn+1.96^2)。
+    LL(SP,95)：SP在95%置信区间的低限，LL(SP,95)=(B1-B2)/B3*100%。
+    HL(SP,95)：SP在95%置信区间的高限，L(SP,95)=(B1+B2)/B3*100%。
+    PP：阳性的后验概率，PP=(P(+)/P(-)*LR(+)/[(P(+)/P(-)*LR(+)+1]
+    PN：阴性的后验概率，PN=(P(-)/P(+)*LR(-)/[(P(-)/P(+)*LR(-)+1]
+
+2.2 模式2：最大限量
+  输入参数的符号、名称以及要求：
+    c(max)：最大容许浓度c(max)。
+    c：测量浓度c。
+    u(c)：测量浓度的标准不确定度u(c)。
+  输出参数的符号、名称以及要求：
+    如果合格，输出Conforming, c <= c(max)，和PP
+      （阳性的后验概率，NORM.DIST(c(max), c, u(c), TRUE)）
+    如果不合格，输出Non-conforming, c > c(max)，和PN
+      （阴性的后验概率，1-NORM.DIST(c(max), c, u(c), TRUE)）
+
+2.3 模式3：最小限量
+  输入参数的符号、名称以及要求：
+    c(min)：最小容许浓度c(min)。
+    c：测量浓度c。
+    u(c)：测量浓度的标准不确定度u(c)。
+  输出参数的符号、名称以及要求：
+    如果合格，输出Conforming, c >= c(min)，和PP
+      （阳性的后验概率，1-NORM.DIST(c(min), c, u(c), TRUE)）
+    如果不合格，输出Non-conforming, c < c(min)，和PN
+      （阴性的后验概率，NORM.DIST(c(min), c, u(c), TRUE)）
+
+2.4 模式4：区间限量
+  输入参数的符号、名称以及要求：
+    c(min)：最小容许浓度c(min)。
+    c(max)：最大容许浓度c(max)。
+    c：测量浓度c。
+    u(c)：测量浓度的标准不确定度u(c)。
+  输出参数的符号、名称以及要求：
+    如果合格，输出Conforming, c(min) <= c <= c(max)，和PP
+      （阳性的后验概率，NORM.DIST(c(max),c,u(c),TRUE)-NORM.DIST(c(min),c,u(c),TRUE)）
+    如果不合格，输出Non-conforming,c<c(min)orc>c(max)，和PN
+      （阴性的后验概率，1-NORM.DIST(c(max),c,u(c),TRUE)+NORM.DIST(c(min),c,u(c),TRUE)）
+</div>
+
+<script>
+    // ========== 全局状态 ==========
+    const NotAvail = "Not available";
+    const Tab = "\t";
+
+    // 四种模式的默认示例文本
+    const defaultExamples = {
+        'Contingency': 'tp=9 fp=1\nfn=1 tn=9\nP(+)=0.5 P(-)=0.5',
+        'Max': 'c(max)=0.5\nc=0.7\nu(c)=0.14',
+        'Min': 'c(min)=0.5\nc=0.7\nu(c)=0.14',
+        'Interval': 'c(min)=0.5\nc(max)=0.9\nc=0.7\nu(c)=0.14'
+    };
+
+    // 当前设置
+    let currentMode = 'Contingency';
+    let normalNum = true;
+    let digNum = 5;
+
+    // ========== 初始化 ==========
+    window.onload = function() {
+        document.querySelector('input[name="mode"][value="Contingency"]').checked = true;
+        document.getElementById('inputText').value = defaultExamples['Contingency'];
+        document.getElementById('digitInput').value = 5;
+        document.querySelector('input[name="numberFormat"][value="normal"]').checked = true;
+    };
+
+    // 切换模式时更新输入框
+    function switchMode() {
+        const modeRadio = document.querySelector('input[name="mode"]:checked');
+        if (modeRadio) {
+            currentMode = modeRadio.value;
+            document.getElementById('inputText').value = defaultExamples[currentMode];
+            document.getElementById('outputText').value = '';
+        }
+    }
+
+    // 获取当前数字格式和小数位数（直接从界面读取）
+    function updateSettings() {
+        const fmtRadio = document.querySelector('input[name="numberFormat"]:checked');
+        normalNum = (fmtRadio && fmtRadio.value === 'normal');
+        const digitInput = document.getElementById('digitInput');
+        let tempDig = parseInt(digitInput.value);
+        if (isNaN(tempDig) || tempDig < 0 || tempDig > 10) {
+            tempDig = 5;
+            digitInput.value = 5;
+        }
+        digNum = tempDig;
+    }
+
+    // ========== 数字格式化 ==========
+    function formatNum(num) {
+        if (num === null || num === undefined || isNaN(num)) {
+            return NotAvail;
+        }
+        if (normalNum) {
+            return num.toFixed(digNum);
+        } else {
+            return num.toExponential(14);
+        }
+    }
+
+    // ========== 正态累积分布 (A&S 7.1.26) ==========
+    function normCum(point, mean, sd) {
+        const a1 =  0.254829592;
+        const a2 = -0.284496736;
+        const a3 =  1.421413741;
+        const a4 = -1.453152027;
+        const a5 =  1.061405429;
+        const p  =  0.3275911;
+
+        let x = (point - mean) / sd;
+        let sign = (x < 0) ? -1 : 1;
+        x = Math.abs(x) / Math.sqrt(2.0);
+        let t = 1.0 / (1.0 + p * x);
+        let y = 1.0 - (((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x));
+        return 0.5 * (1.0 + sign * y);
+    }
+
+    // ========== 解析输入文本 (模仿 Delphi 分词逻辑) ==========
+    function parseInput(text) {
+        const params = {};
+        const chars = [...text];
+        const n = chars.length;
+        let i = 0;
+
+        const isWordChar = (ch) => {
+            return /[0-9A-Za-z_.%()+\-]/.test(ch);
+        };
+
+        const tokens = [];
+
+        while (i < n) {
+            if (isWordChar(chars[i])) {
+                let start = i;
+                while (i < n && isWordChar(chars[i])) {
+                    i++;
+                }
+                tokens.push(text.substring(start, i));
+            } else if (chars[i] === '=') {
+                tokens.push('=');
+                i++;
+            } else if (chars[i] === ' ' || chars[i] === '\n' || chars[i] === '\r' || chars[i] === '\t') {
+                i++;
+            } else {
+                alert('错误字符 Error char: ' + chars[i]);
+                return params;
+            }
+        }
+
+        for (let j = 0; j < tokens.length - 2; j++) {
+            if (tokens[j+1] === '=') {
+                const key = tokens[j];
+                const value = tokens[j+2];
+                params[key] = value;
+                j += 2;
+            }
+        }
+        return params;
+    }
+
+    // ========== 列联表计算 ==========
+    function calcContingency(params) {
+        const lines = [];
+        const tpVal = params['tp'];
+        const fpVal = params['fp'];
+        const fnVal = params['fn'];
+        const tnVal = params['tn'];
+        const pposVal = params['P(+)'];
+        const pnegVal = params['P(-)'];
+
+        if (tpVal === undefined || fpVal === undefined || fnVal === undefined || tnVal === undefined ||
+            pposVal === undefined || pnegVal === undefined) {
+            alert('错误：缺少必需参数 (tp, fp, fn, tn, P(+), P(-))');
+            return [];
+        }
+
+        const tp = parseInt(tpVal);
+        const fp = parseInt(fpVal);
+        const fn = parseInt(fnVal);
+        const tn = parseInt(tnVal);
+        const ppos = parseFloat(pposVal);
+        const pneg = parseFloat(pnegVal);
+
+        if (isNaN(tp) || isNaN(fp) || isNaN(fn) || isNaN(tn) ||
+            tp < 0 || fp < 0 || fn < 0 || tn < 0) {
+            alert('错误：tp, fp, fn, tn 必须是非负整数。');
+            return [];
+        }
+        if (isNaN(ppos) || isNaN(pneg) || ppos < 0 || pneg < 0) {
+            alert('错误：P(+), P(-) 必须是非负实数。');
+            return [];
+        }
+        if (Math.abs((ppos + pneg) - 1.0) > 1e-10) {
+            alert('P(+)+P(-)≠1');
+            return [];
+        }
+
+        const p = tp + fp;
+        const n = fn + tn;
+        const pc = tp + fn;
+        const nc = fp + tn;
+
+        lines.push(`tp=${tp}${Tab}fp=${fp}${Tab}p=${p}`);
+        lines.push(`fn=${fn}${Tab}tn=${tn}${Tab}n=${n}`);
+        lines.push(`pc=${pc}${Tab}nc=${nc}`);
+
+        let tpr = null;
+        if (pc > 0) {
+            tpr = tp / pc;
+            lines.push(`TP=SS=tp/pc=${Tab}${formatNum(tpr)}`);
+        } else {
+            lines.push(`TP=SS=${Tab}${NotAvail}`);
+        }
+
+        let fpr = null;
+        if (nc > 0) {
+            fpr = fp / nc;
+            lines.push(`FP=fp/nc=${Tab}${formatNum(fpr)}`);
+        } else {
+            lines.push(`FP=${Tab}${NotAvail}`);
+        }
+
+        let tnr = null;
+        if (nc > 0) {
+            tnr = tn / nc;
+            lines.push(`TN=SP=tn/nc=${Tab}${formatNum(tnr)}`);
+        } else {
+            lines.push(`TN=${Tab}${NotAvail}`);
+        }
+
+        let fnr = null;
+        if (pc > 0) {
+            fnr = fn / pc;
+            lines.push(`FN=fn/pc=${Tab}${formatNum(fnr)}`);
+        } else {
+            lines.push(`FN=${Tab}${NotAvail}`);
+        }
+
+        let ppv = null;
+        if (p > 0) {
+            ppv = tp / p;
+            lines.push(`PPV=tp/p=${Tab}${formatNum(ppv)}`);
+        } else {
+            lines.push(`PPV=${Tab}${NotAvail}`);
+        }
+
+        let npv = null;
+        if (n > 0) {
+            npv = tn / n;
+            lines.push(`NPV=tn/n=${Tab}${formatNum(npv)}`);
+        } else {
+            lines.push(`NPV=${Tab}${NotAvail}`);
+        }
+
+        if ((p + n) > 0) {
+            const e = (tp + tn) / (p + n);
+            lines.push(`E=(tp+tn)/(p+n)=${Tab}${formatNum(e)}`);
+        } else {
+            lines.push(`E=${Tab}${NotAvail}`);
+        }
+
+        if (tpr !== null && tnr !== null) {
+            const y = tpr * 100 + tnr * 100 - 100;
+            lines.push(`Y=SS(%)+SP(%)-100=${Tab}${formatNum(y)}`);
+        } else {
+            lines.push(`Y=${Tab}${NotAvail}`);
+        }
+
+        let lrp = null;
+        if (fpr !== null && fpr > 0 && tpr !== null) {
+            lrp = tpr / fpr;
+            lines.push(`LR(+)=TP/FP=${Tab}${formatNum(lrp)}`);
+        } else {
+            lines.push(`LR(+)=${Tab}${NotAvail}`);
+        }
+
+        let lrn = null;
+        if (fnr !== null && fnr > 0 && tnr !== null) {
+            lrn = tnr / fnr;
+            lines.push(`LR(-)=TN/FN=${Tab}${formatNum(lrn)}`);
+        } else {
+            lines.push(`LR(-)=${Tab}${NotAvail}`);
+        }
+
+        const canCalcSS = (tp + fn) > 0;
+        if (canCalcSS) {
+            const a1 = 2 * tp + 1.96 * 1.96;
+            lines.push(`A1=2tp+1.96^2=${Tab}${formatNum(a1)}`);
+            const a2 = 1.96 * Math.sqrt(1.96 * 1.96 + 4 * tp * fn / (tp + fn));
+            lines.push(`A2=1.96*(1.96^2+4tp*fn/(tp+fn))^0.5=${Tab}${formatNum(a2)}`);
+            const a3 = 2 * (tp + fn + 1.96 * 1.96);
+            lines.push(`A3=2(tp+fn+1.96^2)=${Tab}${formatNum(a3)}`);
+            const llss95 = (a1 - a2) / a3;
+            const hlss95 = (a1 + a2) / a3;
+            lines.push(`LL(SS,95)=(A1-A2)/A3*100%=${Tab}${formatNum(llss95)}`);
+            lines.push(`HL(SS,95)=(A1+A2)/A3*100%=${Tab}${formatNum(hlss95)}`);
+        } else {
+            lines.push(`A2=${Tab}${NotAvail}`);
+            lines.push(`LL(SS,95)=${Tab}${NotAvail}`);
+            lines.push(`HL(SS,95)=${Tab}${NotAvail}`);
+        }
+
+        const canCalcSP = (fp + tn) > 0;
+        if (canCalcSP) {
+            const b1 = 2 * tn + 1.96 * 1.96;
+            lines.push(`B1=2tn+1.96^2=${Tab}${formatNum(b1)}`);
+            const b2 = 1.96 * Math.sqrt(1.96 * 1.96 + 4 * fp * tn / (fp + tn));
+            lines.push(`B2=1.96*(1.96^2+4fp*tn/(fp+tn))^0.5=${Tab}${formatNum(b2)}`);
+            const b3 = 2 * (fp + tn + 1.96 * 1.96);
+            lines.push(`B3=2(fp+tn+1.96^2)=${Tab}${formatNum(b3)}`);
+            const llsp95 = (b1 - b2) / b3;
+            const hlsp95 = (b1 + b2) / b3;
+            lines.push(`LL(SP,95)=(B1-B2)/B3*100%=${Tab}${formatNum(llsp95)}`);
+            lines.push(`HL(SP,95)=(B1+B2)/B3*100%=${Tab}${formatNum(hlsp95)}`);
+        } else {
+            lines.push(`B2=${Tab}${NotAvail}`);
+            lines.push(`LL(SP,95)=${Tab}${NotAvail}`);
+            lines.push(`HL(SP,95)=${Tab}${NotAvail}`);
+        }
+
+        if (lrp !== null && lrp > -1 && ppos > 0) {
+            const pp = (ppos / pneg * lrp) / (ppos / pneg * lrp + 1);
+            lines.push(`PP=(P(+)/P(-)*LR(+))/[(P(+)/P(-)*LR(+)+1]=${Tab}${formatNum(pp)}`);
+        } else {
+            lines.push(`PP=${Tab}${NotAvail}`);
+        }
+
+        if (lrn !== null && lrn > -1 && pneg > 0) {
+            const pn = (pneg / ppos * lrn) / (pneg / ppos * lrn + 1);
+            lines.push(`PN=(P(-)/P(+)*LR(-))/[(P(-)/P(+)*LR(-)+1]=${Tab}${formatNum(pn)}`);
+        } else {
+            lines.push(`PN=${Tab}${NotAvail}`);
+        }
+
+        return lines;
+    }
+
+    // ========== 最大限量 ==========
+    function calcMaxLimit(params) {
+        const lines = [];
+        const cmaxVal = params['c(max)'];
+        const cVal = params['c'];
+        const ucVal = params['u(c)'];
+        if (cmaxVal === undefined || cVal === undefined || ucVal === undefined) {
+            alert('错误：缺少参数 (c(max), c, u(c))');
+            return [];
+        }
+        const cmax = parseFloat(cmaxVal);
+        const c = parseFloat(cVal);
+        const uc = parseFloat(ucVal);
+        if (isNaN(cmax) || isNaN(c) || isNaN(uc)) {
+            alert('错误数值 Error value');
+            return [];
+        }
+        if (uc <= 0) {
+            alert('错误：u(c) 必须 > 0');
+            return [];
+        }
+
+        if (c <= cmax) {
+            lines.push('Conforming, c <= c(max)');
+            const pp = normCum(cmax, c, uc);
+            lines.push(`PP=${Tab}${formatNum(pp)}`);
+        } else {
+            lines.push('Non-conforming, c > c(max)');
+            const pn = 1 - normCum(cmax, c, uc);
+            lines.push(`PN=${Tab}${formatNum(pn)}`);
+        }
+        return lines;
+    }
+
+    // ========== 最小限量 ==========
+    function calcMinLimit(params) {
+        const lines = [];
+        const cminVal = params['c(min)'];
+        const cVal = params['c'];
+        const ucVal = params['u(c)'];
+        if (cminVal === undefined || cVal === undefined || ucVal === undefined) {
+            alert('错误：缺少参数 (c(min), c, u(c))');
+            return [];
+        }
+        const cmin = parseFloat(cminVal);
+        const c = parseFloat(cVal);
+        const uc = parseFloat(ucVal);
+        if (isNaN(cmin) || isNaN(c) || isNaN(uc)) {
+            alert('错误数值 Error value');
+            return [];
+        }
+        if (uc <= 0) {
+            alert('错误：u(c) 必须 > 0');
+            return [];
+        }
+
+        if (c >= cmin) {
+            lines.push('Conforming, c >= c(min)');
+            const pp = 1 - normCum(cmin, c, uc);
+            lines.push(`PP=${Tab}${formatNum(pp)}`);
+        } else {
+            lines.push('Non-conforming, c < c(min)');
+            const pn = normCum(cmin, c, uc);
+            lines.push(`PN=${Tab}${formatNum(pn)}`);
+        }
+        return lines;
+    }
+
+    // ========== 区间限量 ==========
+    function calcIntervalLimit(params) {
+        const lines = [];
+        const cminVal = params['c(min)'];
+        const cmaxVal = params['c(max)'];
+        const cVal = params['c'];
+        const ucVal = params['u(c)'];
+        if (cminVal === undefined || cmaxVal === undefined || cVal === undefined || ucVal === undefined) {
+            alert('错误：缺少参数 (c(min), c(max), c, u(c))');
+            return [];
+        }
+        const cmin = parseFloat(cminVal);
+        const cmax = parseFloat(cmaxVal);
+        const c = parseFloat(cVal);
+        const uc = parseFloat(ucVal);
+        if (isNaN(cmin) || isNaN(cmax) || isNaN(c) || isNaN(uc)) {
+            alert('错误数值 Error value');
+            return [];
+        }
+        if (uc <= 0) {
+            alert('错误：u(c) 必须 > 0');
+            return [];
+        }
+        if (cmax <= cmin) {
+            alert('错误 Error: max <= min');
+            return [];
+        }
+
+        if (c >= cmin && c <= cmax) {
+            lines.push('Conforming, c(min) <= c <= c(max)');
+            const pp = normCum(cmax, c, uc) - normCum(cmin, c, uc);
+            lines.push(`PP=${Tab}${formatNum(pp)}`);
+        } else {
+            lines.push('Non-conforming, c < c(min) or c > c(max)');
+            const pn = 1 - normCum(cmax, c, uc) + normCum(cmin, c, uc);
+            lines.push(`PN=${Tab}${formatNum(pn)}`);
+        }
+        return lines;
+    }
+
+    // ========== 主计算入口 ==========
+    function calculate() {
+        // 同步设置
+        updateSettings();
+
+        const modeRadio = document.querySelector('input[name="mode"]:checked');
+        if (!modeRadio) {
+            alert('请选择模式');
+            return;
+        }
+        currentMode = modeRadio.value;
+
+        const inputText = document.getElementById('inputText').value.trim();
+        if (!inputText) {
+            alert('请输入数据');
+            return;
+        }
+
+        const params = parseInput(inputText);
+        let outputLines = [];
+
+        try {
+            switch (currentMode) {
+                case 'Contingency':
+                    outputLines = calcContingency(params);
+                    break;
+                case 'Max':
+                    outputLines = calcMaxLimit(params);
+                    break;
+                case 'Min':
+                    outputLines = calcMinLimit(params);
+                    break;
+                case 'Interval':
+                    outputLines = calcIntervalLimit(params);
+                    break;
+                default:
+                    alert('未知模式');
+            }
+        } catch (e) {
+            alert('计算异常: ' + e.message);
+            return;
+        }
+
+        document.getElementById('outputText').value = outputLines.join('\n');
+    }
+
+    // ========== 显示介绍 ==========
+    function showIntroduction() {
+        const helpText = document.getElementById('helpContent').innerText;
+        const newWindow = window.open('', '_blank', 'width=750,height=700,scrollbars=yes');
+        newWindow.document.write('<html><head><meta charset="UTF-8"><title>使用说明书</title></head><body><pre style="white-space:pre-wrap; font-size:14px; font-family:宋体,SimSun;">' + helpText + '</pre></body></html>');
+    }
+</script>
+</body>
+</html>
